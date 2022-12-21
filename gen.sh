@@ -9,19 +9,33 @@ touch $DIR/small.txt
 touch $DIR/large.txt
 cat > "$DIR"/src/main.rs << EOF
 use std::error::Error;
-use std::fs;
+use std::io;
 
-const PATH: &str = "./small.txt";
-// const PATH: &str = "./large.txt";
+const SOLVE: char = 'A';
+// const SOLVE: char = 'B';
 
-fn main() -> Result<(), Box<dyn Error>> {
-    let input = fs::read_to_string(PATH).unwrap();
-
-    for line in input.lines() {
-        todo!("{line}");
+fn solve_a(input: impl Iterator<Item = String>) -> Result<i32, Box<dyn Error>> {
+    for line in input {
+        todo!("{:?}", line);
     }
+    Ok(1)
+}
 
-    Ok(())
+fn solve_b(input: impl Iterator<Item = String>) -> Result<i32, Box<dyn Error>> {
+    for line in input {
+        todo!("{:?}", line);
+    }
+    Ok(2)
+}
+
+fn main() {
+    let input = io::stdin().lines().map(|line| line.expect("IO error"));
+
+    match SOLVE {
+        'A' => println!("a soln: {}", solve_a(input).unwrap()),
+        'B' => println!("b soln: {}", solve_b(input).unwrap()),
+        _ => panic!("Unrecognised soln"),
+    }
 }
 
 EOF
