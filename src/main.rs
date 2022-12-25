@@ -1,4 +1,4 @@
-use std::{env, io};
+use std::{env, fs};
 
 mod aoc_01;
 mod aoc_02;
@@ -7,18 +7,32 @@ mod aoc_04;
 mod aoc_05;
 mod aoc_06;
 
-fn get_problem() -> Option<(String, char)> {
-    let problem_number: String = env::args().nth(1)?;
-    let problem_part = env::args().nth(2)?.chars().next()?;
-    Some((problem_number, problem_part))
+struct Problem {
+    number: String,
+    part: char,
+    size: String,
+}
+
+impl Problem {
+    fn from_args() -> Option<Problem> {
+        let number: String = env::args().nth(1)?;
+        let part = env::args().nth(2)?.chars().next()?;
+        let size = env::args().nth(3)?;
+
+        Some(Problem { number, part, size })
+    }
 }
 
 fn main() {
-    let input = io::stdin().lines().map(|line| line.expect("IO error"));
-    let problem = get_problem().expect("Usage:\n  cargo run -- a");
-    let problem: (&str, char) = (&problem.0, problem.1);
+    let problem = Problem::from_args().expect("Usage:\n  cargo run -- 06 a small");
 
-    match problem {
+    let path = format!("./input/{}-{}.txt", problem.number, problem.size);
+
+    let input_txt = fs::read_to_string(&path).expect("Could not find input file");
+    let input = input_txt.lines().map(|x| x.to_string());
+
+    let problem_pair: (&str, &char) = (&problem.number, &problem.part);
+    match problem_pair {
         ("01", 'a') => println!("a soln: {}", aoc_01::solve_a(input).unwrap()),
         ("01", 'b') => println!("b soln: {}", aoc_01::solve_b(input).unwrap()),
         ("02", 'a') => println!("a soln: {}", aoc_02::solve_a(input).unwrap()),
