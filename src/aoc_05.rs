@@ -1,7 +1,5 @@
-use core::panic;
 use regex::Regex;
 use std::error::Error;
-use std::{env, io};
 
 fn parse_crates(lines: &Vec<String>) -> Vec<Vec<char>> {
     let re = Regex::new(r"(?:\[(.)\]|(    ))").unwrap();
@@ -80,7 +78,7 @@ fn get_last_crates(crates: &Vec<Vec<char>>) -> String {
     last_crates
 }
 
-fn solve_a(input: impl Iterator<Item = String>) -> Result<String, Box<dyn Error>> {
+pub fn solve_a(input: impl Iterator<Item = String>) -> Result<String, Box<dyn Error>> {
     let lines: Vec<String> = input.collect();
     let mut crates = parse_crates(&lines);
     let instructions = parse_instructions(&lines);
@@ -97,7 +95,7 @@ fn solve_a(input: impl Iterator<Item = String>) -> Result<String, Box<dyn Error>
     Ok(get_last_crates(&crates))
 }
 
-fn solve_b(input: impl Iterator<Item = String>) -> Result<String, Box<dyn Error>> {
+pub fn solve_b(input: impl Iterator<Item = String>) -> Result<String, Box<dyn Error>> {
     let lines: Vec<String> = input.collect();
     let mut crates = parse_crates(&lines);
     let instructions = parse_instructions(&lines);
@@ -112,21 +110,4 @@ fn solve_b(input: impl Iterator<Item = String>) -> Result<String, Box<dyn Error>
     }
 
     Ok(get_last_crates(&crates))
-}
-
-fn get_problem() -> Option<char> {
-    let arg = env::args().nth(1)?;
-    let problem = arg.chars().next();
-    problem
-}
-
-fn main() {
-    let problem = get_problem().expect("Usage:\n  cargo run -- a");
-    let input = io::stdin().lines().map(|line| line.expect("IO error"));
-
-    match problem {
-        'a' => println!("a soln: {}", solve_a(input).unwrap()),
-        'b' => println!("b soln: {}", solve_b(input).unwrap()),
-        _ => panic!("Unrecognised soln"),
-    }
 }

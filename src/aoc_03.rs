@@ -1,10 +1,5 @@
 use itertools::Itertools;
 use std::collections::HashSet;
-use std::error::Error;
-use std::fs;
-
-// const PATH: &str = "./small.txt";
-const PATH: &str = "./large.txt";
 
 fn get_score_char(char: &char) -> u32 {
     // println!("{}", char);
@@ -15,10 +10,10 @@ fn get_score_char(char: &char) -> u32 {
     }
 }
 
-fn get_count_a(input: &str) -> u32 {
+pub fn solve_a(input: impl Iterator<Item = String>) -> Option<u32> {
     let mut count = 0;
 
-    for line in input.lines() {
+    for line in input {
         let length = line.chars().count();
         let (str1, str2) = line.split_at(length / 2);
 
@@ -35,13 +30,13 @@ fn get_count_a(input: &str) -> u32 {
         // println!("{} has score: {}", intersect, get_score(intersect));
         count += get_score_char(intersect);
     }
-    count
+    Some(count)
 }
 
-fn get_count_b(input: &str) -> u32 {
+pub fn solve_b(input: impl Iterator<Item = String>) -> Option<u32> {
     let mut count = 0;
 
-    for mut lines in &input.lines().chunks(3) {
+    for mut lines in &input.chunks(3) {
         let mut hash_set1 = HashSet::new();
         let mut hash_set2 = HashSet::new();
         let mut hash_set3 = HashSet::new();
@@ -60,13 +55,5 @@ fn get_count_b(input: &str) -> u32 {
         let mut int2 = int1.intersection(&hash_set3);
         count += get_score_char(&int2.next().unwrap());
     }
-    count
-}
-
-fn main() -> Result<(), Box<dyn Error>> {
-    let input = fs::read_to_string(PATH).unwrap();
-
-    println!("Value of count 1: {}", get_count_a(&input));
-    println!("Value of count 2: {}", get_count_b(&input));
-    Ok(())
+    Some(count)
 }
