@@ -16,4 +16,4 @@ pub fn solve_b(input: impl Iterator<Item = String>) -> Result<usize, &'static st
 EOF
 
 echo "Created $1. To run:"
-echo "  cargo run $1 a large"
+echo "  cargo run $1 a small"
