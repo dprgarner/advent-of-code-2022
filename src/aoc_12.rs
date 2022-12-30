@@ -1,0 +1,268 @@
+use std::collections::{HashSet, VecDeque};
+
+struct Map {
+    heights: Vec<Vec<u32>>,
+    start: (usize, usize),
+    end: (usize, usize),
+    neighbours: Vec<Vec<Vec<(usize, usize)>>>,
+    reverse_neighbours: Vec<Vec<Vec<(usize, usize)>>>,
+    row_count: usize,
+    col_count: usize,
+}
+
+impl Map {
+    fn get_neighbours(
+        heights: &Vec<Vec<u32>>,
+    ) -> (Vec<Vec<Vec<(usize, usize)>>>, Vec<Vec<Vec<(usize, usize)>>>) {
+        let mut neighbours = Vec::new();
+        let mut reverse_neighbours = Vec::new();
+
+        let row_count = heights.len();
+        let col_count = heights[0].len();
+        for i in 0..row_count {
+            neighbours.push(Vec::new());
+            reverse_neighbours.push(Vec::new());
+            for j in 0..col_count {
+                neighbours[i].push(Vec::new());
+                reverse_neighbours[i].push(Vec::new());
+                let mut to_check = Vec::new();
+                if i > 0 {
+                    to_check.push((i - 1, j))
+                };
+                if j > 0 {
+                    to_check.push((i, j - 1));
+                }
+                if j < col_count - 1 {
+                    to_check.push((i, j + 1));
+                }
+                if i < row_count - 1 {
+                    to_check.push((i + 1, j))
+                };
+                for (p, q) in to_check {
+                    if heights[i][j] >= heights[p][q] - 1 {
+                        neighbours[i][j].push((p, q));
+                    }
+                    if heights[p][q] >= heights[i][j] - 1 {
+                        reverse_neighbours[i][j].push((p, q));
+                    }
+                }
+            }
+        }
+
+        (neighbours, reverse_neighbours)
+    }
+
+    fn parse(input: impl Iterator<Item = String>) -> Option<Map> {
+        let mut start = None;
+        let mut end = None;
+
+        let mut heights = Vec::new();
+        for (i, row) in input.enumerate() {
+            heights.push(Vec::new());
+            for (j, col) in row.chars().enumerate() {
+                let mut digit = col.to_digit(36)? - 'a'.to_digit(36).unwrap() + 1;
+                if col == 'S' {
+                    start = Some((i, j));
+                    digit = 1;
+                } else if col == 'E' {
+                    end = Some((i, j));
+                    digit = 26;
+                }
+                heights[i].push(digit);
+            }
+        }
+        let (neighbours, reverse_neighbours) = Map::get_neighbours(&heights);
+        let row_count = heights.len();
+        let col_count = heights[0].len();
+
+        Some(Map {
+            heights,
+            start: start?,
+            end: end?,
+            neighbours,
+            reverse_neighbours,
+            row_count,
+            col_count,
+        })
+    }
+}
+
+struct SolvedMap {
+    map: Map,
+    distances: Vec<Vec<Option<u32>>>,
+    min_distance: u32,
+}
+
+impl SolvedMap {
+    fn solve(map: Map) -> Option<SolvedMap> {
+        let mut distances = Vec::new();
+        for i in 0..map.row_count {
+            distances.push(Vec::new());
+            for _ in 0..map.col_count {
+                distances[i].push(None);
+            }
+        }
+        distances[map.start.0][map.start.1] = Some(0);
+
+        let mut locations_to_try = VecDeque::new();
+        locations_to_try.push_back(map.start.clone());
+        let mut visited: HashSet<(usize, usize)> = HashSet::new();
+
+        while !locations_to_try.is_empty() {
+            let (i, j) = locations_to_try.pop_front().unwrap();
+            if (i, j) == map.end {
+                let min_distance = distances[i][j].unwrap();
+                return Some(SolvedMap {
+                    map,
+                    distances,
+                    min_distance,
+                });
+            } else if visited.contains(&(i, j)) {
+                continue;
+            }
+            visited.insert((i, j));
+
+            let neighbour_new_distance = distances[i][j].unwrap() + 1;
+
+            for (p, q) in &map.neighbours[i][j] {
+                distances[*p][*q] = match distances[*p][*q] {
+                    None => Some(neighbour_new_distance),
+                    Some(old_distance) => Some(neighbour_new_distance.min(old_distance)),
+                };
+                locations_to_try.push_back((*p, *q));
+            }
+        }
+
+        None
+    }
+
+    fn solve_reverse(map: Map) -> Option<SolvedMap> {
+        let mut distances = Vec::new();
+        for i in 0..map.row_count {
+            distances.push(Vec::new());
+            for _ in 0..map.col_count {
+                distances[i].push(None);
+            }
+        }
+        distances[map.end.0][map.end.1] = Some(0);
+
+        let mut locations_to_try = VecDeque::new();
+        locations_to_try.push_back(map.end.clone());
+        let mut visited: HashSet<(usize, usize)> = HashSet::new();
+
+        while !locations_to_try.is_empty() {
+            let (i, j) = locations_to_try.pop_front().unwrap();
+            if map.heights[i][j] == 1 {
+                let min_distance = distances[i][j].unwrap();
+                return Some(SolvedMap {
+                    map,
+                    distances,
+                    min_distance,
+                });
+            } else if visited.contains(&(i, j)) {
+                continue;
+            }
+            visited.insert((i, j));
+
+            let neighbour_new_distance = distances[i][j].unwrap() + 1;
+
+            for (p, q) in &map.reverse_neighbours[i][j] {
+                distances[*p][*q] = match distances[*p][*q] {
+                    None => Some(neighbour_new_distance),
+                    Some(old_distance) => Some(neighbour_new_distance.min(old_distance)),
+                };
+                locations_to_try.push_back((*p, *q));
+            }
+        }
+
+        None
+    }
+}
+
+pub fn solve_a(input: impl Iterator<Item = String>) -> Result<u32, &'static str> {
+    let map = Map::parse(input).ok_or("Could not parse map")?;
+    let solved_map = SolvedMap::solve(map).ok_or("Could not solve map")?;
+    Ok(solved_map.min_distance)
+}
+
+pub fn solve_b(input: impl Iterator<Item = String>) -> Result<u32, &'static str> {
+    let map = Map::parse(input).ok_or("Could not parse map")?;
+    let solved_map = SolvedMap::solve_reverse(map).ok_or("Could not solve map")?;
+    Ok(solved_map.min_distance)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[rustfmt::skip]
+    static TEST_MAP: [&str; 5] = [
+        "Sabqponm",
+        "abcryxxl",
+        "accszExk",
+        "acctuvwj",
+        "abdefghi",
+    ];
+
+    #[test]
+    fn it_parses_heights() {
+        let map = Map::parse(TEST_MAP.map(String::from).into_iter()).unwrap();
+        assert_eq!(map.start, (0, 0));
+        assert_eq!(map.end, (2, 5));
+        #[rustfmt::skip]
+        assert_eq!(
+            map.heights,
+            [
+                [ 1,  1,  2, 17, 16, 15, 14, 13],
+                [ 1,  2,  3, 18, 25, 24, 24, 12],
+                [ 1,  3,  3, 19, 26, 26, 24, 11],
+                [ 1,  3,  3, 20, 21, 22, 23, 10],
+                [ 1,  2,  4,  5,  6,  7,  8,  9]
+            ]
+        );
+    }
+
+    #[test]
+    fn it_calculates_neighbours() {
+        let map = Map::parse(TEST_MAP.map(String::from).into_iter()).unwrap();
+        assert_eq!(map.neighbours[0][0], [(0, 1), (1, 0)]);
+        assert_eq!(map.neighbours[1][2], [(0, 2), (1, 1), (2, 2)]);
+        assert_eq!(map.neighbours[4][2], [(3, 2), (4, 1), (4, 3)]);
+        assert_eq!(map.neighbours[4][7], [(3, 7), (4, 6)]);
+    }
+
+    #[test]
+    fn it_finds_minimal_distances() {
+        let map = Map::parse(TEST_MAP.map(String::from).into_iter()).unwrap();
+        let solved_map = SolvedMap::solve(map).unwrap();
+        assert_eq!(solved_map.distances[0][0], Some(0));
+        assert_eq!(solved_map.distances[0][1], Some(1));
+        assert_eq!(solved_map.distances[1][0], Some(1));
+        assert_eq!(solved_map.distances[1][1], Some(2));
+        assert_eq!(solved_map.distances[2][5], Some(31));
+    }
+
+    #[test]
+    fn solves_a() {
+        let a_soln = solve_a(TEST_MAP.map(String::from).into_iter()).unwrap();
+        assert_eq!(a_soln, 31);
+    }
+
+    #[test]
+    fn it_calculates_reverse_neighbours() {
+        let map = Map::parse(TEST_MAP.map(String::from).into_iter()).unwrap();
+        assert_eq!(map.reverse_neighbours[0][0], [(0, 1), (1, 0)]);
+        assert_eq!(
+            map.reverse_neighbours[1][2],
+            [(0, 2), (1, 1), (1, 3), (2, 2)]
+        );
+        assert_eq!(map.reverse_neighbours[3][3], [(2, 3), (3, 4)]);
+        assert_eq!(map.reverse_neighbours[4][7], [(3, 7), (4, 6)]);
+    }
+
+    #[test]
+    fn solves_b() {
+        let b_soln = solve_b(TEST_MAP.map(String::from).into_iter()).unwrap();
+        assert_eq!(b_soln, 29);
+    }
+}
