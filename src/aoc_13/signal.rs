@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 #[derive(PartialEq, Debug)]
 enum SignalToken {
     OpenBracket,
@@ -93,6 +95,49 @@ impl Signal {
     }
 }
 
+impl Ord for Signal {
+    fn cmp(&self, other: &Self) -> Ordering {
+        if let (Self::Int(x), Self::Int(y)) = (self, other) {
+            if x < y {
+                return Ordering::Less;
+            };
+            if x > y {
+                return Ordering::Greater;
+            }
+            return Ordering::Equal;
+        }
+        if let (Self::Int(int), Self::List(_)) = (self, other) {
+            let vec = vec![Self::Int(*int)];
+            return Self::List(vec).cmp(other);
+        }
+        if let (Self::List(_), Self::Int(int)) = (self, other) {
+            let vec = vec![Self::Int(*int)];
+            return self.cmp(&Self::List(vec));
+        }
+        if let (Self::List(x), Self::List(y)) = (self, other) {
+            for i in 0..x.len().min(y.len()) {
+                let is_ordered_at_idx = x[i].cmp(&y[i]);
+                if is_ordered_at_idx != Ordering::Equal {
+                    return is_ordered_at_idx;
+                }
+            }
+            if x.len() < y.len() {
+                return Ordering::Less;
+            }
+            if x.len() > y.len() {
+                return Ordering::Greater;
+            }
+        }
+        Ordering::Equal
+    }
+}
+
+impl PartialOrd for Signal {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -139,29 +184,6 @@ mod tests {
     }
 
     #[test]
-    fn it_parses_a_flat_list() {
-        let input = "[1,1,3,1,1]";
-        assert_eq!(
-            Signal::parse(input).unwrap(),
-            Signal::List(vec![
-                Signal::Int(1),
-                Signal::Int(1),
-                Signal::Int(3),
-                Signal::Int(1),
-                Signal::Int(1),
-            ])
-        );
-    }
-
-    #[test]
-    fn it_rejects_malformed_strings() {
-        assert_eq!(Signal::parse("[y̆]"), None);
-        assert_eq!(Signal::parse("[1"), None);
-        assert_eq!(Signal::parse(""), None);
-        assert_eq!(Signal::parse("1]"), None);
-    }
-
-    #[test]
     fn it_finds_closing_brackets() {
         assert_eq!(
             Signal::find_closing_bracket(&vec![
@@ -188,6 +210,29 @@ mod tests {
             ]),
             None
         );
+    }
+
+    #[test]
+    fn it_parses_a_flat_list() {
+        let input = "[1,1,3,1,1]";
+        assert_eq!(
+            Signal::parse(input).unwrap(),
+            Signal::List(vec![
+                Signal::Int(1),
+                Signal::Int(1),
+                Signal::Int(3),
+                Signal::Int(1),
+                Signal::Int(1),
+            ])
+        );
+    }
+
+    #[test]
+    fn it_rejects_malformed_strings() {
+        assert_eq!(Signal::parse("[y̆]"), None);
+        assert_eq!(Signal::parse("[1"), None);
+        assert_eq!(Signal::parse(""), None);
+        assert_eq!(Signal::parse("1]"), None);
     }
 
     #[test]
@@ -228,5 +273,37 @@ mod tests {
                 Signal::List(vec![Signal::Int(5), Signal::Int(6),]),
             ])
         );
+    }
+
+    #[test]
+    fn it_orders_same_list_size() {
+        let x = Signal::parse("[1,1]").unwrap();
+        let y = Signal::parse("[1,2]").unwrap();
+        assert_eq!(x < y, true);
+        assert_eq!(y < x, false);
+    }
+
+    #[test]
+    fn it_orders_different_list_sizes() {
+        let x = Signal::parse("[1,2]").unwrap();
+        let y = Signal::parse("[1,2,3]").unwrap();
+        assert_eq!(x < y, true);
+        assert_eq!(y < x, false);
+    }
+
+    #[test]
+    fn it_orders_lists_against_lists() {
+        let x = Signal::parse("[[1],[2]]").unwrap();
+        let y = Signal::parse("[[1],[3]]").unwrap();
+        assert_eq!(x < y, true);
+        assert_eq!(y < x, false);
+    }
+
+    #[test]
+    fn it_orders_lists_against_ints() {
+        let x = Signal::parse("[[1],[2]]").unwrap();
+        let y = Signal::parse("[1,[3]]").unwrap();
+        assert_eq!(x < y, true);
+        assert_eq!(y < x, false);
     }
 }
