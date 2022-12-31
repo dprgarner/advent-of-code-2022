@@ -1,4 +1,4 @@
-use std::collections::{HashSet, VecDeque};
+use std::collections::VecDeque;
 
 struct Map {
     heights: Vec<Vec<u32>>,
@@ -76,12 +76,10 @@ impl Map {
     where
         F: Fn(&Self, usize, usize) -> bool,
     {
-        let row_count = self.heights.len();
-        let col_count = self.heights[0].len();
         let mut distances = Vec::new();
-        for i in 0..row_count {
+        for i in 0..self.heights.len() {
             distances.push(Vec::new());
-            for _ in 0..col_count {
+            for _ in 0..self.heights[0].len() {
                 distances[i].push(None);
             }
         }
@@ -89,29 +87,21 @@ impl Map {
 
         let mut locations_to_try = VecDeque::new();
         locations_to_try.push_back(self.end.clone());
-        let mut visited: HashSet<(usize, usize)> = HashSet::new();
 
-        while !locations_to_try.is_empty() {
-            let (i, j) = locations_to_try.pop_front().unwrap();
+        while let Some((i, j)) = locations_to_try.pop_front() {
+            let distance = distances[i][j].unwrap();
+
             if stop_condition(self, i, j) {
-                let min_distance = distances[i][j].unwrap();
-                return Some(min_distance);
-            } else if visited.contains(&(i, j)) {
-                continue;
+                return Some(distance);
             }
-            visited.insert((i, j));
-
-            let neighbour_new_distance = distances[i][j].unwrap() + 1;
 
             for (p, q) in &self.neighbours[i][j] {
-                distances[*p][*q] = match distances[*p][*q] {
-                    None => Some(neighbour_new_distance),
-                    Some(old_distance) => Some(neighbour_new_distance.min(old_distance)),
-                };
-                locations_to_try.push_back((*p, *q));
+                if distances[*p][*q] == None {
+                    distances[*p][*q] = Some(distance + 1);
+                    locations_to_try.push_back((*p, *q));
+                }
             }
         }
-
         None
     }
 }
@@ -176,6 +166,19 @@ mod tests {
     fn solves_a() {
         let a_soln = solve_a(TEST_MAP.map(String::from).into_iter()).unwrap();
         assert_eq!(a_soln, 31);
+    }
+
+    #[test]
+    fn returns_no_soln_for_a() {
+        #[rustfmt::skip]
+        let no_soln_map = [
+            "Sab",
+            "aac",
+            "acE",
+        ];
+
+        let a_no_soln = solve_a(no_soln_map.map(String::from).into_iter());
+        assert_eq!(a_no_soln, Err("Could not solve map"));
     }
 
     #[test]
