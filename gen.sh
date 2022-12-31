@@ -5,11 +5,11 @@
 touch input/$1-small.txt
 touch input/$1-large.txt
 cat > src/aoc_$1.rs << EOM
-pub fn solve_a(_input: impl Iterator<Item = String>) -> Result<String, &'static str> {
+pub fn solve_a(_input: impl Iterator<Item = String>) -> Result<usize, &'static str> {
     todo!("Solution for part a not yet implemented");
 }
 
-pub fn solve_b(_input: impl Iterator<Item = String>) -> Result<String, &'static str> {
+pub fn solve_b(_input: impl Iterator<Item = String>) -> Result<usize, &'static str> {
     todo!("Solution for part b not yet implemented");
 }
 
@@ -18,20 +18,19 @@ mod tests {
     use super::*;
 
     #[test]
-    fn it_runs_a() -> Result<(), String> {
+    #[ignore]
+    fn it_runs_a() {
         let input = ["line 1", "line 2"].map(String::from).into_iter();
-        let result = solve_a(input)?;
-        assert_eq!(result, "a");
-        Ok(())
+        let result = solve_a(input).unwrap();
+        assert_eq!(result, 1);
     }
 
     #[test]
     #[ignore]
-    fn it_runs_b() -> Result<(), String> {
-        let input = [String::from("abc")];
-        let result = solve_b(input.into_iter())?;
-        assert_eq!(result, "b");
-        Ok(())
+    fn it_runs_b() {
+        let input = ["line 1", "line 2"].map(String::from).into_iter();
+        let result = solve_b(input).unwrap();
+        assert_eq!(result, 2);
     }
 }
 
