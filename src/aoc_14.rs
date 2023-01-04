@@ -113,24 +113,3 @@ pub fn solve_b(input: impl Iterator<Item = String>) -> Result<usize, &'static st
     let iterations = 1 + structure.pour_sand();
     Ok(iterations)
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    #[ignore]
-    fn it_runs_a() {
-        let input = ["line 1", "line 2"].map(String::from).into_iter();
-        let result = solve_a(input).unwrap();
-        assert_eq!(result, 1);
-    }
-
-    #[test]
-    #[ignore]
-    fn it_runs_b() {
-        let input = ["line 1", "line 2"].map(String::from).into_iter();
-        let result = solve_b(input).unwrap();
-        assert_eq!(result, 2);
-    }
-}
