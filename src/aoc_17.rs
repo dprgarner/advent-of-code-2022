@@ -1,9 +1,10 @@
-use core::panic;
 use std::{
     collections::{HashSet, VecDeque},
     error::Error,
     vec,
 };
+
+use itertools::Itertools;
 
 #[derive(Debug, Clone, Copy)]
 struct Direction(i32, i32);
@@ -39,12 +40,6 @@ struct Loop<T> {
     vec: Vec<T>,
 }
 
-impl<T> Loop<T> {
-    fn len(&self) -> usize {
-        self.vec.len()
-    }
-}
-
 impl<T: Copy> Iterator for Loop<T> {
     type Item = T;
 
@@ -71,7 +66,6 @@ struct Shape {
 // |
 // v y
 // (y, x)
-
 lazy_static! {
     static ref SHAPE_COORDS: Vec<Vec<(i32, i32)>> = vec![
         vec![(0, 3), (0, 4), (0, 5), (0, 6)],
@@ -105,10 +99,6 @@ struct Chamber {
     filled_space: HashSet<(i32, i32)>,
     directions: Loop<Direction>,
     shape_idx: usize,
-
-    /// The largest y-coordinate of a shape or floor that a new shape could
-    /// potentially collide with.
-    relevant_height: i32,
 }
 
 impl Chamber {
@@ -119,12 +109,16 @@ impl Chamber {
             filled_space,
             directions,
             shape_idx: 0,
-            relevant_height: 4,
         }
     }
 
+    #[allow(dead_code)]
     fn print(&self) {
-        for y in 0..(self.relevant_height + 1) {
+        let mut relevant_height = 0;
+        for (i, _) in &self.filled_space {
+            relevant_height = relevant_height.max(*i);
+        }
+        for y in 0..(relevant_height + 1) {
             let mut line = String::new();
             for x in 0..9 {
                 if x == 0 || x == 8 {
@@ -152,9 +146,49 @@ impl Chamber {
         false
     }
 
-    fn clear_irrelevant(&mut self) {
-        // Maze-solving. Remove all the squares that it's now impossible to
-        // collide with.
+    fn move_shape_until_collision(&mut self, mut shape: Shape) -> Shape {
+        loop {
+            let direction = self.directions.next().unwrap();
+            shape.move_direction(&direction);
+
+            if self.collides(&shape) {
+                shape.move_direction(&direction.reverse());
+            }
+
+            shape.move_direction(&Direction(1, 0));
+            if self.collides(&shape) {
+                shape.move_direction(&Direction(-1, 0));
+                return shape;
+            }
+        }
+    }
+
+    /// Saves the shape into `self.filled_space`, and returns the amount by
+    /// which this shape has increased the height of the tower.
+    fn save_shape(&mut self, shape: Shape) -> i32 {
+        let mut new_min_coord = 4;
+        for coords in &shape.coords {
+            self.filled_space.insert(*coords);
+            new_min_coord = new_min_coord.min(coords.0);
+        }
+        let height_gained = 4 - new_min_coord;
+        return height_gained;
+    }
+
+    /// Adjusts the grid coordinates so that the next shape always appears with
+    /// its lowest y-coordinate at 0.
+    fn shift_coords_up(&mut self, height_gained: i32) {
+        self.highest += height_gained;
+        let mut new_filled_space = HashSet::new();
+        for (y, x) in &self.filled_space {
+            new_filled_space.insert((y + height_gained, *x));
+        }
+        self.filled_space = new_filled_space;
+    }
+
+    /// Uses a breadth-first search to remove all the filled squares which it's
+    /// now impossible for a shape to collide with.
+    fn clear_inaccessible(&mut self) {
         let mut open_spaces = VecDeque::from([(0, 1)]);
         let mut new_filled_space = HashSet::new();
         let mut new_relevant_height = 0;
@@ -175,47 +209,18 @@ impl Chamber {
             }
         }
         self.filled_space = new_filled_space;
-        self.relevant_height = new_relevant_height;
     }
 
-    fn save_shape(&mut self, shape: &Shape) {
-        let mut new_min_coord = 4;
-        for coords in &shape.coords {
-            self.filled_space.insert(*coords);
-            new_min_coord = new_min_coord.min(coords.0);
-        }
-        let height_gained = 4 - new_min_coord;
-        self.highest += height_gained;
-
-        let mut new_filled_space = HashSet::new();
-        for (y, x) in &self.filled_space {
-            new_filled_space.insert((y + height_gained, *x));
-        }
-        self.filled_space = new_filled_space;
-        self.relevant_height = height_gained;
-
-        self.clear_irrelevant();
-    }
-
+    /// Moves the shape until it's collided with the floor or an existing shape,
+    /// and then shifts and simplifies the coords to the simplest
+    /// representation.
     fn drop_shape(&mut self) {
         let mut shape = Shape::new(self.shape_idx);
         self.shape_idx = (self.shape_idx + 1) % 5;
-
-        loop {
-            let direction = self.directions.next().unwrap();
-            shape.move_direction(&direction);
-
-            if self.collides(&shape) {
-                shape.move_direction(&direction.reverse());
-            }
-
-            shape.move_direction(&Direction(1, 0));
-            if self.collides(&shape) {
-                shape.move_direction(&Direction(-1, 0));
-                self.save_shape(&shape);
-                return;
-            }
-        }
+        shape = self.move_shape_until_collision(shape);
+        let height_gained = self.save_shape(shape);
+        self.shift_coords_up(height_gained);
+        self.clear_inaccessible();
     }
 }
 
@@ -229,48 +234,52 @@ pub fn solve_a(input: impl Iterator<Item = String>) -> Result<i32, Box<dyn Error
     Ok(chamber.highest)
 }
 
-// fn find_cycle(chamber: &mut Chamber) -> (usize, usize, i32) {
-//     // Search for a cycle: a place where the same shape is next and the top-most
-//     // shapes are the same. The easiest way to find this is is to look for when
-//     // the top-most elements are a row.
-//     let mut filled_row = None;
-//     let mut idx = 0;
+/// Iterates until it finds a cycle: a repetition of the same shape index and
+/// direction index where all the accessible filled squares are the same.
+fn find_cycle(chamber: &mut Chamber) -> (i64, i64, i64, i64) {
+    let mut chamber_history: Vec<(usize, usize, HashSet<(i32, i32)>, i32)> = Vec::new();
 
-//     // Argh. This approach only works for the large soln.
-//     loop {
-//         chamber.drop_shape();
-//         if (1..8).all(|x| chamber.filled_space.contains(&(chamber.highest, x))) {
-//             if let Some((last_idx, last_shape_idx, last_highest)) = filled_row {
-//                 // It's only a cycle if it starts and ends on the same shape.
-//                 assert_eq!(last_shape_idx, chamber.shape_idx);
-//                 let height_change = chamber.highest - last_highest;
-//                 return (last_idx, idx, height_change);
-//             } else {
-//                 filled_row = Some((idx, chamber.shape_idx, chamber.highest));
-//             }
-//         }
-//         idx += 1;
-//     }
-// }
+    loop {
+        chamber.drop_shape();
+        let last_occurrence = chamber_history.iter().find_position(|x| {
+            x.0 == chamber.shape_idx && x.1 == chamber.directions.idx && x.2 == chamber.filled_space
+        });
+        if let Some((idx, last_occurrence)) = last_occurrence {
+            return (
+                (idx).try_into().unwrap(),
+                (chamber_history.len()).try_into().unwrap(),
+                last_occurrence.3.try_into().unwrap(),
+                chamber.highest.try_into().unwrap(),
+            );
+        }
+        chamber_history.push((
+            chamber.shape_idx,
+            chamber.directions.idx,
+            chamber.filled_space.clone(),
+            chamber.highest,
+        ));
+    }
+}
 
-pub fn solve_b(input: impl Iterator<Item = String>) -> Result<usize, Box<dyn Error>> {
+// static TARGET: i64 = 2022;
+static TARGET: i64 = 1000000000000;
+
+pub fn solve_b(input: impl Iterator<Item = String>) -> Result<i64, Box<dyn Error>> {
     let directions = parse_directions(input)?;
     let mut chamber = Chamber::new(directions);
 
-    // Search for a cycle where the state is the same.
-    // let (start_idx, end_idx, height_change) = find_cycle(&mut chamber);
-    // dbg!(start_idx, end_idx, height_change);
-    // let cycle_length = end_idx - start_idx;
+    let (cycle_start_idx, cycle_end_idx, cycle_start_height, cycle_end_height) =
+        find_cycle(&mut chamber);
 
-    // let complete_cycles: i64 = 1000000000000 / (cycle_length as i64);
-    // dbg!(complete_cycles);
-    // let height_change = complete_cycles
-    // idx: 1546
-    // highest: 24245310
+    let cycles_to_skip = (TARGET - cycle_end_idx) / (cycle_end_idx - cycle_start_idx) - 1;
+    let height_delta_of_skipped_cycles = (cycle_end_height - cycle_start_height) * cycles_to_skip;
+    let remaining_shape_drops =
+        TARGET - cycles_to_skip * (cycle_end_idx - cycle_start_idx) - cycle_end_idx - 1;
 
-    // Ok(cycle_length)
-    Ok(1)
-    // Ok(chamber.highest)
+    for _ in 0..remaining_shape_drops {
+        chamber.drop_shape();
+    }
+    Ok(height_delta_of_skipped_cycles + i64::from(chamber.highest))
 }
 
 #[cfg(test)]
@@ -287,10 +296,11 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn it_runs_b() {
-        let input = ["line 1", "line 2"].map(String::from).into_iter();
+        let input = [">>><<><>><<<>><>>><<<>>><<<><<<>><>><<>>"]
+            .map(String::from)
+            .into_iter();
         let result = solve_b(input).unwrap();
-        assert_eq!(result, 2);
+        assert_eq!(result, 1514285714288);
     }
 }
