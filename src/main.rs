@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate lazy_static;
+
 use std::{env, fs};
 
 mod aoc_01;
@@ -16,6 +19,7 @@ mod aoc_13;
 mod aoc_14;
 mod aoc_15;
 mod aoc_16;
+mod aoc_17;
 
 struct Problem {
     number: String,
@@ -75,6 +79,8 @@ fn main() {
         ("15", 'b') => println!("b soln: {}", aoc_15::solve_b(input).unwrap()),
         ("16", 'a') => println!("a soln: {}", aoc_16::solve_a(input).unwrap()),
         ("16", 'b') => println!("b soln: {}", aoc_16::solve_b(input).unwrap()),
+        ("17", 'a') => println!("a soln: {}", aoc_17::solve_a(input).unwrap()),
+        ("17", 'b') => println!("b soln: {}", aoc_17::solve_b(input).unwrap()),
         _ => panic!("Unrecognised problem and solution"),
     }
 }

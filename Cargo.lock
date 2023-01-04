@@ -7,6 +7,7 @@ name = "advent-of-code-2022"
 version = "0.1.0"
 dependencies = [
  "itertools",
+ "lazy_static",
  "regex",
 ]
 
@@ -33,6 +34,12 @@ checksum = "b0fd2260e829bddf4cb6ea802289de2f86d6a7a690192fbe91b3f46e0f2c8473"
 dependencies = [
  "either",
 ]
+
+[[package]]
+name = "lazy_static"
+version = "0.1.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cf186d1a8aa5f5bee5fd662bc9c1b949e0259e1bcc379d1f006847b0080c7417"
 
 [[package]]
 name = "memchr"
