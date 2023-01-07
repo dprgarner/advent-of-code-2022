@@ -6,7 +6,7 @@ mod material;
 
 use blueprint::Blueprint;
 use factory_state::FactoryState;
-use material::MATERIALS;
+use material::Material;
 
 /// Essentially brute force. Tries each material in turn as the type of next
 /// robot to build, and stops if the sequence takes longer than the max turns to
@@ -15,8 +15,8 @@ fn recursively_get_best_score(factory_states: &mut Vec<FactoryState>) -> i32 {
     let l = factory_states.len();
     let mut best_so_far = factory_states[l - 1].score();
 
-    for material in &MATERIALS {
-        if let Some(next_state) = factory_states[l - 1].build_next_robot(material) {
+    for material in Material::each() {
+        if let Some(next_state) = factory_states[l - 1].build_next_robot(&material) {
             factory_states.push(next_state);
             best_so_far = best_so_far.max(recursively_get_best_score(factory_states));
             factory_states.pop();
@@ -49,7 +49,7 @@ pub fn solve_a(input: impl Iterator<Item = String>) -> Result<i32, Box<dyn Error
 // large set, and it didn't return an answer for the small set at all. (The
 // small set took 10 minutes when `max_turns = 27`.)
 pub fn solve_b(input: impl Iterator<Item = String>) -> Result<i32, Box<dyn Error>> {
-    let max_turns = 32;
+    let max_turns = 30;
     let mut best_scores_product = 1;
     for (idx, blueprint) in input.map(Blueprint::parse).take(3).enumerate() {
         let blueprint = blueprint?;

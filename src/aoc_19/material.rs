@@ -11,13 +11,18 @@ pub enum Material {
     Geode,
 }
 
-// TODO turn into iterator on something or other
-pub static MATERIALS: [Material; 4] = [
+static MATERIALS: [Material; 4] = [
     Material::Ore,
     Material::Clay,
     Material::Obsidian,
     Material::Geode,
 ];
+
+impl Material {
+    pub fn each() -> &'static [Material; 4] {
+        &MATERIALS
+    }
+}
 
 impl Display for Material {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -44,15 +49,6 @@ where
     pub obsidian: T,
     pub geode: T,
 }
-
-// impl<T: Default> IntoIterator for MaterialMap<T> {
-//     type Item = T;
-//     type IntoIter = array::IntoIter<T, 4>;
-
-//     fn into_iter(self) -> Self::IntoIter {
-//         [self.ore, self.clay, self.obsidian, self.geode].into_iter()
-//     }
-// }
 
 impl<T: Default> Default for MaterialMap<T> {
     fn default() -> Self {
@@ -85,6 +81,41 @@ impl<T: Default> IndexMut<&Material> for MaterialMap<T> {
             Material::Clay => &mut self.clay,
             Material::Obsidian => &mut self.obsidian,
             Material::Geode => &mut self.geode,
+        }
+    }
+}
+
+// This doesn't appear to be any slower than using MATERIALS and iterating over
+// the key/value pairs.
+pub struct MaterialMapIterator<'a, T: Default> {
+    material_map: &'a MaterialMap<T>,
+    idx: usize,
+}
+
+impl<'a, T: Default> Iterator for MaterialMapIterator<'a, T> {
+    type Item = (&'static Material, &'a T);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let result = match self.idx {
+            0 => Some((&MATERIALS[0], &self.material_map.ore)),
+            1 => Some((&MATERIALS[1], &self.material_map.clay)),
+            2 => Some((&MATERIALS[2], &self.material_map.obsidian)),
+            3 => Some((&MATERIALS[3], &self.material_map.geode)),
+            _ => None,
+        };
+        self.idx += 1;
+        result
+    }
+}
+
+impl<'a, T: Default> IntoIterator for &'a MaterialMap<T> {
+    type Item = (&'static Material, &'a T);
+    type IntoIter = MaterialMapIterator<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        MaterialMapIterator {
+            material_map: self,
+            idx: 0,
         }
     }
 }

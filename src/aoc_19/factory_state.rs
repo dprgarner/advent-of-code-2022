@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use super::blueprint::Blueprint;
-use super::material::{Material, MaterialMap, MATERIALS};
+use super::material::{Material, MaterialMap};
 
 #[derive(Clone)]
 pub struct FactoryState<'a> {
@@ -17,19 +17,15 @@ impl Display for FactoryState<'_> {
         let mut str_ = String::new();
         str_.push_str(&format!("\nEnd of Turn {}\n", self.turn));
         str_.push_str(&format!("Resources:\n"));
-        for robot_material in &MATERIALS {
-            str_.push_str(&format!(
-                "  {:?}: {}\n",
-                robot_material, self.resources[robot_material]
-            ));
+
+        for (material, count) in &self.resources {
+            str_.push_str(&format!("  {:?}: {}\n", material, count));
         }
         str_.push_str(&format!("Robots:\n"));
-        for robot_material in &MATERIALS {
-            str_.push_str(&format!(
-                "  {:?}: {}\n",
-                robot_material, self.robots[robot_material]
-            ));
+        for (robot_material, robot_count) in &self.robots {
+            str_.push_str(&format!("  {:?}: {}\n", robot_material, robot_count));
         }
+
         write!(f, "{}", &str_)
     }
 }
@@ -56,14 +52,13 @@ impl FactoryState<'_> {
     /// within the max number of turns, otherwise returns None.
     pub fn build_next_robot<'a>(&self, robot: &Material) -> Option<Self> {
         let mut required_turns: usize = 0;
-        for cost_material in &MATERIALS {
-            let cost_amount = &self.blueprint.robot_costs[robot][cost_material];
+        for (cost_material, cost_amount) in &self.blueprint.robot_costs[robot] {
             if cost_amount == &0 {
                 continue;
             }
             let required_turns_for_resource: usize;
-            let missing_resources = cost_amount - &self.resources[cost_material];
-            let production_rate = self.robots[cost_material];
+            let missing_resources = cost_amount - &self.resources[&cost_material];
+            let production_rate = self.robots[&cost_material];
             if production_rate == 0 {
                 // There will never be enough resources to build this robot
                 return None;
@@ -87,11 +82,10 @@ impl FactoryState<'_> {
         }
 
         let mut new_factory = self.clone();
-        for robot_material in &MATERIALS {
-            let robot_count = &new_factory.robots[robot_material];
-            let material_cost = new_factory.blueprint.robot_costs[robot][robot_material];
+        for (robot_material, robot_count) in &new_factory.robots {
+            let material_cost = new_factory.blueprint.robot_costs[robot][&robot_material];
 
-            new_factory.resources[robot_material] +=
+            new_factory.resources[&robot_material] +=
                 robot_count * required_turns as i32 - material_cost;
         }
         new_factory.turn += required_turns;
