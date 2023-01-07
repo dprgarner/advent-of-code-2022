@@ -1,0 +1,52 @@
+Best score for 1: 2
+    Ore, Ore, Ore, Clay, Clay, Clay, Clay, Clay, Clay, Ore, Obsidian, Clay, Ore, Obsidian, Ore, Ore, Geode
+Best score for 2: 1
+    Ore, Ore, Ore, Clay, Clay, Clay, Ore, Clay, Clay, Clay, Clay, Obsidian, Ore, Obsidian, Ore, Ore, Ore, Geode
+Best score for 3: 0
+Best score for 4: 8
+    Clay, Clay, Clay, Clay, Obsidian, Clay, Obsidian, Obsidian, Geode, Geode
+Best score for 5: 1
+    Ore, Ore, Ore, Clay, Clay, Clay, Clay, Clay, Clay, Clay, Obsidian, Obsidian, Ore, Obsidian, Ore, Geode
+Best score for 6: 11
+    Soln1: Clay, Clay, Obsidian, Obsidian, Ore, Obsidian, Geode, Geode, Ore, Geode
+Best score for 7: 0
+Best score for 8: 2
+    Ore, Ore, Clay, Clay, Clay, Clay, Clay, Clay, Obsidian, Ore, Obsidian, Ore, Obsidian, Ore, Geode
+Best score for 9: 0
+Best score for 10: 1
+    Ore, Ore, Clay, Clay, Clay, Clay, Clay, Clay, Ore, Obsidian, Clay, Ore, Obsidian, Ore, Ore, Obsidian, Ore, Geode
+Best score for 11: 1
+    Ore, Ore, Ore, Clay, Clay, Clay, Clay, Clay, Clay, Clay, Obsidian, Obsidian, Ore, Obsidian, Ore, Geode
+Best score for 12: 7
+    Ore, Ore, Clay, Clay, Clay, Clay, Clay, Clay, Clay, Obsidian, Ore, Obsidian, Ore, Obsidian, Ore, Geode, Ore, Ore, Geode
+Best score for 13: 0
+Best score for 14: 0
+Best score for 15: 0
+Best score for 16: 2
+    Ore, Ore, Clay, Ore, Clay, Clay, Clay, Clay, Clay, Clay, Obsidian, Ore, Obsidian, Ore, Ore, Ore, Geode
+Best score for 17: 2
+    Ore, Ore, Clay, Ore, Clay, Clay, Clay, Clay, Clay, Obsidian, Obsidian, Ore, Obsidian, Ore, Geode
+Best score for 18: 7
+    Ore, Clay, Ore, Clay, Clay, Clay, Clay, Obsidian, Ore, Obsidian, Obsidian, Ore, Ore, Geode, Obsidian, Ore, Geode
+Best score for 19: 2
+    Ore, Ore, Ore, Clay, Clay, Clay, Clay, Ore, Clay, Clay, Obsidian, Clay, Ore, Obsidian, Ore, Ore, Obsidian, Ore, Geode
+Best score for 20: 6
+    Ore, Ore, Ore, Clay, Clay, Clay, Clay, Clay, Clay, Clay, Obsidian, Ore, Obsidian, Obsidian, Ore, Obsidian, Geode, Ore, Geode
+Best score for 21: 5
+    Clay, Clay, Obsidian, Obsidian, Ore, Obsidian, Geode, Obsidian, Geode
+Best score for 22: 1
+    Ore, Clay, Clay, Clay, Clay, Obsidian, Obsidian, Ore, Obsidian, Ore, Geode
+Best score for 23: 1
+    Ore, Ore, Ore, Clay, Clay, Clay, Clay, Clay, Ore, Obsidian, Clay, Clay, Obsidian, Ore, Obsidian, Ore, Ore, Geode
+Best score for 24: 1
+    Ore, Ore, Ore, Clay, Clay, Clay, Clay, Clay, Obsidian, Obsidian, Ore, Obsidian, Obsidian, Obsidian, Ore, Geode
+Best score for 25: 0
+Best score for 26: 0
+Best score for 27: 0
+Best score for 28: 1
+    Ore, Ore, Clay, Clay, Clay, Clay, Clay, Clay, Clay, Obsidian, Clay, Obsidian, Clay, Obsidian, Obsidian, Clay, Geode
+Best score for 29: 2
+    Ore, Ore, Clay, Clay, Clay, Clay, Clay, Clay, Clay, Clay, Obsidian, Obsidian, Ore, Obsidian, Ore, Obsidian, Ore, Ore, Geode
+Best score for 30: 5
+    Ore, Ore, Ore, Clay, Clay, Clay, Clay, Clay, Clay, Ore, Obsidian, Obsidian, Clay, Obsidian, Ore, Obsidian, Geode, Ore, Ore, Geode
+

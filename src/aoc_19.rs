@@ -1,219 +1,259 @@
-use std::{collections::HashMap, error::Error};
+use std::error::Error;
 
-use itertools::Itertools;
-use regex::Regex;
+mod blueprint;
+mod factory_state;
+mod material;
 
-#[derive(PartialEq, Eq, Debug, Hash, Clone)]
-enum Material {
-    Ore,
-    Clay,
-    Obsidian,
-    Geode,
-}
+use blueprint::Blueprint;
+use factory_state::FactoryState;
+use material::MATERIALS;
 
-#[derive(PartialEq, Eq, Debug)]
-struct Blueprint {
-    robot_costs: HashMap<Material, HashMap<Material, i32>>,
-}
+/// Essentially brute force. Tries each material in turn as the type of next
+/// robot to build, and stops if the sequence takes longer than the max turns to
+/// build.
+fn recursively_get_best_score(factory_states: &mut Vec<FactoryState>) -> i32 {
+    let l = factory_states.len();
+    let mut best_so_far = factory_states[l - 1].score();
 
-impl Blueprint {
-    fn parse_cost(cost_str: &str) -> Result<HashMap<Material, i32>, Box<dyn Error>> {
-        let cost_regex = Regex::new("(?P<number>\\d+) (?P<material>ore|clay|obsidian)")?;
-
-        let mut cost = HashMap::new();
-        for caps in cost_regex.captures_iter(cost_str) {
-            let material = match caps.name("material").and_then(|x| Some(x.as_str())) {
-                Some("ore") => Some(Material::Ore),
-                Some("clay") => Some(Material::Clay),
-                Some("obsidian") => Some(Material::Obsidian),
-                _ => None,
-            }
-            .ok_or("Could not parse material")?;
-            let number: i32 = caps
-                .name("number")
-                .ok_or("Could not parse number")?
-                .as_str()
-                .parse()?;
-            cost.insert(material, number);
-        }
-
-        Ok(cost)
-    }
-
-    fn parse(line: String) -> Result<Blueprint, Box<dyn Error>> {
-        let (ore_str, clay_str, obsidian_str, geode_str) = line
-            .split(". ")
-            .collect_tuple()
-            .ok_or("Invalid number of robots")?;
-        Ok(Blueprint {
-            robot_costs: HashMap::from([
-                (Material::Ore, Self::parse_cost(ore_str)?),
-                (Material::Clay, Self::parse_cost(clay_str)?),
-                (Material::Obsidian, Self::parse_cost(obsidian_str)?),
-                (Material::Geode, Self::parse_cost(geode_str)?),
-            ]),
-        })
-    }
-}
-
-#[derive(Clone)]
-struct Factory<'a> {
-    turn: i32,
-    blueprint: &'a Blueprint,
-    robots: HashMap<Material, i32>,
-    resources: HashMap<Material, i32>,
-}
-
-impl Factory<'_> {
-    fn new<'a>(blueprint: &'a Blueprint) -> Factory<'a> {
-        Factory {
-            turn: 0,
-            blueprint,
-            robots: HashMap::from([
-                (Material::Ore, 1),
-                (Material::Clay, 0),
-                (Material::Obsidian, 0),
-                (Material::Geode, 0),
-            ]),
-            resources: HashMap::from([
-                (Material::Ore, 0),
-                (Material::Clay, 0),
-                (Material::Obsidian, 0),
-                (Material::Geode, 0),
-            ]),
+    for material in &MATERIALS {
+        if let Some(next_state) = factory_states[l - 1].build_next_robot(material) {
+            factory_states.push(next_state);
+            best_so_far = best_so_far.max(recursively_get_best_score(factory_states));
+            factory_states.pop();
         }
     }
 
-    fn can_build_robot(&self, robot_material: &Material) -> bool {
-        for (cost_material, cost_amount) in &self.blueprint.robot_costs[&robot_material] {
-            if &self.resources[cost_material] < cost_amount {
-                println!("Lack: {:?}", cost_material);
-                return false;
-            }
-        }
-        true
-    }
-
-    fn queue(&mut self, robots: impl Iterator<Item = Material>, turns: usize) {
-        let mut robots = robots.collect_vec();
-
-        for turn in 1..(turns + 1) {
-            let mut is_building_robot = false;
-
-            println!("Turn {turn}");
-            if let Some(robot_material) = robots.first() {
-                if self.can_build_robot(robot_material) {
-                    is_building_robot = true;
-                    println!("Building {:?} robot", robot_material);
-                    for (cost_material, cost_amount) in &self.blueprint.robot_costs[&robot_material]
-                    {
-                        *self.resources.get_mut(cost_material).unwrap() -= cost_amount;
-                    }
-                }
-            }
-            println!("Resources:");
-            for (robot_material, robot_count) in &self.robots {
-                *self.resources.get_mut(robot_material).unwrap() += robot_count;
-                println!(
-                    "  {:?}: {}",
-                    robot_material,
-                    self.resources.get_mut(robot_material).unwrap()
-                );
-            }
-            if is_building_robot {
-                *self.robots.get_mut(&robots.remove(0)).unwrap() += 1;
-            }
-            println!("Robots:");
-            for (robot_material, robot_count) in &self.robots {
-                println!("  {:?}: {}", robot_material, robot_count);
-            }
-            println!("---");
-            println!("\n");
-        }
-    }
+    best_so_far
 }
 
+// Takes about 10s in the production build.
 pub fn solve_a(input: impl Iterator<Item = String>) -> Result<i32, Box<dyn Error>> {
     let blueprints = input
         .map(Blueprint::parse)
         .collect::<Result<Vec<Blueprint>, _>>()?;
 
-    let mut factories = blueprints.iter().map(Factory::new).collect_vec();
-    factories[0].queue(
-        vec![
-            Material::Clay,
-            Material::Clay,
-            Material::Clay,
-            Material::Obsidian,
-            Material::Clay,
-            Material::Obsidian,
-            Material::Geode,
-            Material::Geode,
-        ]
-        .into_iter(),
-        24,
-    );
+    let max_turns = 24;
+    let mut quality_levels = Vec::new();
 
-    println!(
-        "Final geodes: {}\n\n***\n",
-        factories[0].resources[&Material::Geode]
-    );
+    for (idx, blueprint) in blueprints.iter().enumerate() {
+        let mut factory_states = Vec::from([FactoryState::new(blueprint, &max_turns)]);
+        let best_score = recursively_get_best_score(&mut factory_states);
+        println!("Best score for {}: {}", idx + 1, best_score);
+        quality_levels.push(best_score * (idx as i32 + 1));
+    }
 
-    Ok(1)
-    // todo!("Solution for part a not yet implemented");
+    Ok(quality_levels.into_iter().sum())
 }
 
-#[allow(unused_variables)]
+// This is a scrappy brute-force solution. It took nearly an hour to run on the
+// large set, and it didn't return an answer for the small set at all. (The
+// small set took 10 minutes when `max_turns = 27`.)
 pub fn solve_b(input: impl Iterator<Item = String>) -> Result<i32, Box<dyn Error>> {
-    todo!("Solution for part b not yet implemented");
-}
-
-#[derive(PartialEq, Debug)]
-struct Shoe {
-    size: u32,
-    style: String,
+    let max_turns = 32;
+    let mut best_scores_product = 1;
+    for (idx, blueprint) in input.map(Blueprint::parse).take(3).enumerate() {
+        let blueprint = blueprint?;
+        let mut factory_states = Vec::from([FactoryState::new(&blueprint, &max_turns)]);
+        let best_score = recursively_get_best_score(&mut factory_states);
+        println!("Best score for {}: {}", idx + 1, best_score);
+        best_scores_product *= best_score;
+    }
+    Ok(best_scores_product)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::aoc_19::material::{Material, MaterialMap};
+
+    static BLUEPRINT_1 :&str  = "Blueprint 1: Each ore robot costs 4 ore. Each clay robot costs 2 ore. Each obsidian robot costs 3 ore and 14 clay. Each geode robot costs 2 ore and 7 obsidian.";
+    static BLUEPRINT_2 :&str  = "Blueprint 2: Each ore robot costs 2 ore. Each clay robot costs 3 ore. Each obsidian robot costs 3 ore and 8 clay. Each geode robot costs 3 ore and 12 obsidian.";
+
+    fn check_soln(
+        blueprint: &Blueprint,
+        max_turns: &usize,
+        materials: impl Iterator<Item = Material>,
+    ) -> i32 {
+        let mut factory_states = Vec::from([FactoryState::new(blueprint, max_turns)]);
+        for material in materials {
+            {
+                if let Some(next_state) = factory_states.last().unwrap().build_next_robot(&material)
+                {
+                    println!("Built robot: {:?}", &material);
+                    factory_states.push(next_state);
+                } else {
+                    println!("Warning: could not build robot");
+                    break;
+                }
+                println!("{}", factory_states.last().unwrap());
+            }
+        }
+        println!("Turns taken: {}", factory_states.last().unwrap().turn);
+        while let Some(factory_state) = factory_states.pop() {
+            if &factory_state.turn <= max_turns {
+                let score = factory_state.score();
+                println!("Score at turn {}: {}", max_turns, score);
+                println!("---\n");
+                return score;
+            }
+        }
+        panic!("Could not find score");
+    }
 
     #[test]
     fn it_parses_a_blueprint() {
-        let line = "Blueprint 1: Each ore robot costs 4 ore. Each clay robot costs 2 ore. Each obsidian robot costs 3 ore and 14 clay. Each geode robot costs 2 ore and 7 obsidian.";
-        let blueprint = Blueprint::parse(String::from(line)).unwrap();
+        let blueprint = Blueprint::parse(String::from(BLUEPRINT_1)).unwrap();
         assert_eq!(
             blueprint,
             Blueprint {
-                robot_costs: HashMap::from([
-                    (Material::Ore, HashMap::from([(Material::Ore, 4)])),
-                    (Material::Clay, HashMap::from([(Material::Ore, 2)])),
-                    (
-                        Material::Obsidian,
-                        HashMap::from([(Material::Ore, 3), (Material::Clay, 14)])
-                    ),
-                    (
-                        Material::Geode,
-                        HashMap::from([(Material::Ore, 2), (Material::Obsidian, 7)])
-                    ),
-                ])
+                robot_costs: MaterialMap {
+                    ore: MaterialMap {
+                        ore: 4,
+                        ..Default::default()
+                    },
+                    clay: MaterialMap {
+                        ore: 2,
+                        ..Default::default()
+                    },
+                    obsidian: MaterialMap {
+                        ore: 3,
+                        clay: 14,
+                        ..Default::default()
+                    },
+                    geode: MaterialMap {
+                        ore: 2,
+                        obsidian: 7,
+                        ..Default::default()
+                    },
+                }
             }
         );
     }
 
     #[test]
-    #[ignore]
-    fn it_runs_a() {
-        let input = ["aaaaa", "bbbbb"].map(String::from).into_iter();
-        let result = solve_a(input).unwrap();
-        assert_eq!(result, 1);
+    fn it_iterates_to_short_soln_1() {
+        let soln = check_soln(
+            &Blueprint::parse(String::from(BLUEPRINT_1)).unwrap(),
+            &24,
+            vec![
+                Material::Clay,
+                Material::Clay,
+                Material::Clay,
+                Material::Obsidian,
+                Material::Clay,
+                Material::Obsidian,
+                Material::Geode,
+                Material::Geode,
+            ]
+            .into_iter(),
+        );
+        assert_eq!(soln, 9);
     }
 
     #[test]
-    #[ignore]
-    fn it_runs_b() {
-        let input = ["aaaaa", "bbbbb"].map(String::from).into_iter();
-        let result = solve_b(input).unwrap();
-        assert_eq!(result, 2);
+    fn it_iterates_to_long_soln_1() {
+        let soln = check_soln(
+            &Blueprint::parse(String::from(BLUEPRINT_1)).unwrap(),
+            &32,
+            vec![
+                Material::Ore, // I could build Clay earlier, but it's better to build this.
+                Material::Clay,
+                Material::Clay,
+                Material::Clay,
+                Material::Clay,
+                Material::Clay,
+                Material::Clay,
+                Material::Clay, // I could build Obs earlier, but it's better to build this.
+                Material::Obsidian,
+                Material::Obsidian,
+                Material::Obsidian,
+                Material::Obsidian,
+                Material::Geode,
+                Material::Obsidian,
+                Material::Geode,
+                Material::Geode,
+                Material::Geode,
+                Material::Geode,
+                Material::Geode,
+                Material::Geode,
+                Material::Geode,
+                Material::Geode,
+            ]
+            .into_iter(),
+        );
+        assert_eq!(soln, 56);
+    }
+
+    #[test]
+    fn it_iterates_to_short_soln_2() {
+        let soln = check_soln(
+            &Blueprint::parse(String::from(BLUEPRINT_2)).unwrap(),
+            &24,
+            vec![
+                Material::Ore,
+                Material::Ore,
+                Material::Clay,
+                Material::Clay,
+                Material::Clay,
+                Material::Clay,
+                Material::Clay,
+                Material::Obsidian,
+                Material::Obsidian,
+                Material::Obsidian,
+                Material::Obsidian,
+                Material::Obsidian,
+                Material::Geode,
+                Material::Obsidian,
+                Material::Geode,
+                Material::Geode,
+            ]
+            .into_iter(),
+        );
+        assert_eq!(soln, 12);
+    }
+
+    #[test]
+    fn it_iterates_to_long_soln_2() {
+        // Found by trial-and-error.
+        let soln = check_soln(
+            &Blueprint::parse(String::from(BLUEPRINT_2)).unwrap(),
+            &32,
+            vec![
+                // This soln has the property that, on each turn, the best robot possible is built.
+                // Nothing built on the first two turns
+                Material::Ore,
+                // Nothing built on this turn. After this, a robot is built on every other turn.
+                Material::Ore,
+                Material::Clay,
+                Material::Clay,
+                Material::Clay,
+                Material::Clay,
+                Material::Clay,
+                Material::Obsidian,
+                Material::Clay, // Redundant
+                Material::Obsidian,
+                Material::Obsidian,
+                Material::Obsidian,
+                Material::Clay, // Redundant
+                Material::Obsidian,
+                Material::Geode,
+                Material::Obsidian,
+                Material::Geode,
+                Material::Obsidian,
+                Material::Geode,
+                Material::Obsidian,
+                Material::Geode,
+                Material::Obsidian,
+                Material::Geode,
+                Material::Geode,
+                Material::Geode,
+                Material::Obsidian, // Redundant
+                Material::Geode,
+                Material::Geode,
+                Material::Geode, // Redundant
+            ]
+            .into_iter(),
+        );
+        assert_eq!(soln, 62);
     }
 }
