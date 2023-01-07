@@ -8,25 +8,27 @@ use blueprint::Blueprint;
 use factory_state::FactoryState;
 use material::Material;
 
-/// Essentially brute force. Tries each material in turn as the type of next
-/// robot to build, and stops if the sequence takes longer than the max turns to
-/// build.
-fn recursively_get_best_score(factory_states: &mut Vec<FactoryState>) -> i32 {
+/// Tries each material in turn as the type of next robot to build, and stops if
+/// the sequence takes longer than the max turns to build, or if we can tell
+/// that there's no possible chance of improving the score.
+fn recursively_get_best_score(factory_states: &mut Vec<FactoryState>, best_so_far: &mut i32) {
     let l = factory_states.len();
-    let mut best_so_far = factory_states[l - 1].score();
+    *best_so_far = factory_states[l - 1].score().max(*best_so_far);
+
+    // Only iterate if there's a chance of improving the score
+    if &factory_states[l - 1].upper_bound_ignoring_ore_and_clay() < best_so_far {
+        return;
+    }
 
     for material in Material::each() {
         if let Some(next_state) = factory_states[l - 1].build_next_robot(&material) {
             factory_states.push(next_state);
-            best_so_far = best_so_far.max(recursively_get_best_score(factory_states));
+            recursively_get_best_score(factory_states, best_so_far);
             factory_states.pop();
         }
     }
-
-    best_so_far
 }
 
-// Takes about 10s in the production build.
 pub fn solve_a(input: impl Iterator<Item = String>) -> Result<i32, Box<dyn Error>> {
     let blueprints = input
         .map(Blueprint::parse)
@@ -34,10 +36,10 @@ pub fn solve_a(input: impl Iterator<Item = String>) -> Result<i32, Box<dyn Error
 
     let max_turns = 24;
     let mut quality_levels = Vec::new();
-
     for (idx, blueprint) in blueprints.iter().enumerate() {
         let mut factory_states = Vec::from([FactoryState::new(blueprint, &max_turns)]);
-        let best_score = recursively_get_best_score(&mut factory_states);
+        let mut best_score = 0;
+        recursively_get_best_score(&mut factory_states, &mut best_score);
         println!("Best score for {}: {}", idx + 1, best_score);
         quality_levels.push(best_score * (idx as i32 + 1));
     }
@@ -45,16 +47,14 @@ pub fn solve_a(input: impl Iterator<Item = String>) -> Result<i32, Box<dyn Error
     Ok(quality_levels.into_iter().sum())
 }
 
-// This is a scrappy brute-force solution. It took nearly an hour to run on the
-// large set, and it didn't return an answer for the small set at all. (The
-// small set took 10 minutes when `max_turns = 27`.)
 pub fn solve_b(input: impl Iterator<Item = String>) -> Result<i32, Box<dyn Error>> {
-    let max_turns = 30;
+    let max_turns = 32;
     let mut best_scores_product = 1;
     for (idx, blueprint) in input.map(Blueprint::parse).take(3).enumerate() {
         let blueprint = blueprint?;
         let mut factory_states = Vec::from([FactoryState::new(&blueprint, &max_turns)]);
-        let best_score = recursively_get_best_score(&mut factory_states);
+        let mut best_score = 0;
+        recursively_get_best_score(&mut factory_states, &mut best_score);
         println!("Best score for {}: {}", idx + 1, best_score);
         best_scores_product *= best_score;
     }

@@ -50,7 +50,7 @@ impl FactoryState<'_> {
     ///
     /// Returns a factory state with the new robot if it's possible to build it
     /// within the max number of turns, otherwise returns None.
-    pub fn build_next_robot<'a>(&self, robot: &Material) -> Option<Self> {
+    pub fn build_next_robot(&self, robot: &Material) -> Option<Self> {
         let mut required_turns: usize = 0;
         for (cost_material, cost_amount) in &self.blueprint.robot_costs[robot] {
             if cost_amount == &0 {
@@ -91,6 +91,37 @@ impl FactoryState<'_> {
         new_factory.turn += required_turns;
         new_factory.robots[robot] += 1;
         Some(new_factory)
+    }
+
+    /// Runs a simplified iteration, ignoring the costs of ore and clay, and just
+    /// attempting to build Geode robots if possible and Obsidian bots if not for
+    /// the remainder of the iteration.
+    ///
+    /// This gives a (not-necessarily-achievable) upper bound on the possible
+    /// solutions starting from this state.
+    ///
+    /// Thanks, @Crazytieguy !
+    pub fn upper_bound_ignoring_ore_and_clay(&self) -> i32 {
+        if &self.turn == self.max_turns {
+            return self.resources[&Material::Geode] + self.robots[&Material::Geode];
+        };
+        let mut state = self.clone();
+        while &state.turn < state.max_turns {
+            if state.resources[&Material::Obsidian]
+                >= state.blueprint.robot_costs[&Material::Geode][&Material::Obsidian]
+            {
+                state.resources[&Material::Obsidian] += state.robots[&Material::Obsidian]
+                    - state.blueprint.robot_costs[&Material::Geode][&Material::Obsidian];
+                state.resources[&Material::Geode] += state.robots[&Material::Geode];
+                state.robots[&Material::Geode] += 1;
+            } else {
+                state.resources[&Material::Obsidian] += state.robots[&Material::Obsidian];
+                state.resources[&Material::Geode] += state.robots[&Material::Geode];
+                state.robots[&Material::Obsidian] += 1;
+            }
+            state.turn += 1;
+        }
+        return state.resources[&Material::Geode] + self.robots[&Material::Geode];
     }
 
     pub fn score(&self) -> i32 {
