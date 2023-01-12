@@ -28,3 +28,35 @@ impl Instruction {
         instructions
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn it_parses_instructions() {
+        assert_eq!(
+            Instruction::parse("R10"),
+            vec![Instruction::Right, Instruction::Forward(10)]
+        );
+        assert_eq!(Instruction::parse("101"), vec![Instruction::Forward(101)]);
+        assert_eq!(
+            Instruction::parse("10R5L5R10L4R5L5"),
+            vec![
+                Instruction::Forward(10),
+                Instruction::Right,
+                Instruction::Forward(5),
+                Instruction::Left,
+                Instruction::Forward(5),
+                Instruction::Right,
+                Instruction::Forward(10),
+                Instruction::Left,
+                Instruction::Forward(4),
+                Instruction::Right,
+                Instruction::Forward(5),
+                Instruction::Left,
+                Instruction::Forward(5),
+            ]
+        );
+    }
+}

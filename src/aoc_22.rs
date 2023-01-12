@@ -1,42 +1,42 @@
+mod cubic_map;
 mod grid;
 mod instruction;
 mod map;
 mod position;
+mod toroidal_map;
 
 use std::error::Error;
 
-use grid::Grid;
-use instruction::Instruction::{self, *};
+use self::cubic_map::CubicMap;
+use self::grid::parse_grid;
+use self::instruction::Instruction::{self, *};
+use self::map::MonkeyMap;
+use self::position::{Direction, Position};
+use self::toroidal_map::ToroidalMap;
+
 use itertools::Itertools;
-use map::ToroidalMap;
-use position::{Direction, Position};
 
 #[derive(Debug)]
-struct Navigator {
-    map: ToroidalMap,
-    instructions: Vec<Instruction>,
-    position: Position,
+struct Navigator<M: MonkeyMap> {
+    map: M,
     orientation: Direction,
+    position: Position,
+    instructions: Vec<Instruction>,
 }
 
-impl Navigator {
-    fn create(map: ToroidalMap, instructions: Vec<Instruction>) -> Navigator {
+impl<M: MonkeyMap> Navigator<M> {
+    fn create(map: M, instructions: Vec<Instruction>) -> Navigator<M> {
         Navigator {
-            position: map.grid.start(),
+            position: map.start(),
             map,
             instructions,
             orientation: Direction(0, 1),
         }
     }
 
-    #[allow(dead_code)]
-    fn print(&self) {
-        self.map.grid.print(&self.position);
-    }
-
     fn navigate(&mut self) {
         for instruction in &self.instructions {
-            // self.print();
+            // self.map.print(&self.position);
             if let Forward(steps) = instruction {
                 for _ in 0..*steps {
                     self.position = self.map.step(self.position, &self.orientation);
@@ -55,7 +55,7 @@ impl Navigator {
                 }
             }
         }
-        // self.print();
+        // self.map.print(&self.position);
     }
 
     fn password(&self) -> i32 {
@@ -75,8 +75,8 @@ pub fn solve_a(input: impl Iterator<Item = String>) -> Result<i32, Box<dyn Error
     let mut grid_strings = input.collect_vec();
     let instructions = Instruction::parse(&grid_strings.pop().unwrap());
     grid_strings.pop();
-    let grid = Grid::parse(grid_strings.into_iter());
-    let map = ToroidalMap { grid };
+    let grid = parse_grid(grid_strings.into_iter());
+    let map = ToroidalMap::create(grid);
 
     let mut navigator = Navigator::create(map, instructions);
     navigator.navigate();
@@ -88,8 +88,8 @@ pub fn solve_b(input: impl Iterator<Item = String>) -> Result<i32, Box<dyn Error
     let mut grid_strings = input.collect_vec();
     let instructions = Instruction::parse(&grid_strings.pop().unwrap());
     grid_strings.pop();
-    let grid = Grid::parse(grid_strings.into_iter());
-    let map = ToroidalMap { grid };
+    let grid = parse_grid(grid_strings.into_iter());
+    let map = CubicMap::create(grid);
 
     let mut navigator = Navigator::create(map, instructions);
     navigator.navigate();
@@ -100,7 +100,6 @@ pub fn solve_b(input: impl Iterator<Item = String>) -> Result<i32, Box<dyn Error
 #[cfg(test)]
 mod tests {
     use super::*;
-    use grid::Space::*;
 
     const MAP: [&str; 12] = [
         "        ...#",
@@ -118,58 +117,9 @@ mod tests {
     ];
 
     #[test]
-    fn it_parses_instructions() {
-        assert_eq!(
-            Instruction::parse("R10"),
-            vec![Instruction::Right, Instruction::Forward(10)]
-        );
-        assert_eq!(Instruction::parse("101"), vec![Instruction::Forward(101)]);
-        assert_eq!(
-            Instruction::parse("10R5L5R10L4R5L5"),
-            vec![
-                Instruction::Forward(10),
-                Instruction::Right,
-                Instruction::Forward(5),
-                Instruction::Left,
-                Instruction::Forward(5),
-                Instruction::Right,
-                Instruction::Forward(10),
-                Instruction::Left,
-                Instruction::Forward(4),
-                Instruction::Right,
-                Instruction::Forward(5),
-                Instruction::Left,
-                Instruction::Forward(5),
-            ]
-        );
-    }
-
-    #[test]
-    fn it_parses_a_grid() {
-        let grid = Grid::parse(Vec::from(MAP).iter().map(|x| String::from(*x)).into_iter());
-        assert_eq!(grid.0.len(), 14);
-        assert_eq!(
-            grid.0[0],
-            vec![
-                Void, Void, Void, Void, Void, Void, Void, Void, Void, Void, Void, Void, Void, Void,
-                Void, Void, Void, Void,
-            ]
-        );
-        assert_eq!(
-            grid.0[1],
-            vec![
-                Void, // Extra voids are added at the beginning
-                Void, Void, Void, Void, Void, Void, Void, Void, Open, Open, Open, Wall,
-                // Adding extra voids at the end
-                Void, Void, Void, Void, Void,
-            ]
-        );
-    }
-
-    #[test]
     fn it_navigates_to_a_wall() {
-        let grid = Grid::parse(Vec::from(MAP).iter().map(|x| String::from(*x)).into_iter());
-        let map = ToroidalMap { grid };
+        let grid = parse_grid(Vec::from(MAP).iter().map(|x| String::from(*x)).into_iter());
+        let map = ToroidalMap::create(grid);
         let instructions = Instruction::parse("R3");
         let mut navigator = Navigator::create(map, instructions);
 
@@ -180,8 +130,8 @@ mod tests {
 
     #[test]
     fn it_wraps_around_north() {
-        let grid = Grid::parse(Vec::from(MAP).iter().map(|x| String::from(*x)).into_iter());
-        let map = ToroidalMap { grid };
+        let grid = parse_grid(Vec::from(MAP).iter().map(|x| String::from(*x)).into_iter());
+        let map = ToroidalMap::create(grid);
         let instructions = Instruction::parse("L1");
         let mut navigator = Navigator::create(map, instructions);
 
@@ -192,8 +142,8 @@ mod tests {
 
     #[test]
     fn it_wraps_around_south() {
-        let grid = Grid::parse(Vec::from(MAP).iter().map(|x| String::from(*x)).into_iter());
-        let map = ToroidalMap { grid };
+        let grid = parse_grid(Vec::from(MAP).iter().map(|x| String::from(*x)).into_iter());
+        let map = ToroidalMap::create(grid);
         let instructions = Instruction::parse("L1RR1");
         let mut navigator = Navigator::create(map, instructions);
 
@@ -204,8 +154,8 @@ mod tests {
 
     #[test]
     fn it_wraps_around_west() {
-        let grid = Grid::parse(Vec::from(MAP).iter().map(|x| String::from(*x)).into_iter());
-        let map = ToroidalMap { grid };
+        let grid = parse_grid(Vec::from(MAP).iter().map(|x| String::from(*x)).into_iter());
+        let map = ToroidalMap::create(grid);
         let instructions = Instruction::parse("R1R1");
         let mut navigator = Navigator::create(map, instructions);
 
@@ -216,8 +166,8 @@ mod tests {
 
     #[test]
     fn it_does_not_wrap_around_into_wall() {
-        let grid = Grid::parse(Vec::from(MAP).iter().map(|x| String::from(*x)).into_iter());
-        let map = ToroidalMap { grid };
+        let grid = parse_grid(Vec::from(MAP).iter().map(|x| String::from(*x)).into_iter());
+        let map = ToroidalMap::create(grid);
         let instructions = Instruction::parse("RR1");
         let mut navigator = Navigator::create(map, instructions);
 
