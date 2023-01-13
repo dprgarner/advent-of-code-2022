@@ -21,21 +21,21 @@ impl MonkeyMap for ToroidalMap {
         get_start(&self.grid)
     }
 
-    fn step(&self, position: Position, orientation: &Direction) -> Position {
-        let mut next = position + orientation;
+    fn step(&self, position: Position, orientation: Direction) -> (Position, Direction) {
+        let mut next = position + &orientation;
         if self.grid[next.0][next.1] == Void {
             // Wrap back to next open or wall square
-            next = position - orientation;
+            next = position - &orientation;
             while self.grid[next.0][next.1] != Void {
-                next = next - orientation;
+                next = next - &orientation;
             }
-            next = next + orientation;
+            next = next + &orientation;
         }
 
         if self.grid[next.0][next.1] == Open {
-            next
+            (next, orientation)
         } else {
-            position
+            (position, orientation)
         }
     }
 

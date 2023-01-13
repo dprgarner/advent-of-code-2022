@@ -3,7 +3,7 @@ use std::ops::{Add, Sub};
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub struct Position(pub usize, pub usize);
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Hash, Clone, Copy)]
 pub struct Direction(pub i32, pub i32);
 
 impl Add<&Direction> for Position {

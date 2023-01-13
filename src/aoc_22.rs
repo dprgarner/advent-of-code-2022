@@ -36,10 +36,11 @@ impl<M: MonkeyMap> Navigator<M> {
 
     fn navigate(&mut self) {
         for instruction in &self.instructions {
-            // self.map.print(&self.position);
             if let Forward(steps) = instruction {
+                // self.map.print(&self.position);
                 for _ in 0..*steps {
-                    self.position = self.map.step(self.position, &self.orientation);
+                    (self.position, self.orientation) =
+                        self.map.step(self.position, self.orientation);
                 }
             } else {
                 self.orientation = match (&self.orientation, instruction) {
