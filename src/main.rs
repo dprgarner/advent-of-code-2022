@@ -26,6 +26,7 @@ mod aoc_20;
 mod aoc_21;
 mod aoc_22;
 mod aoc_23;
+mod aoc_24;
 
 struct Problem {
     number: String,
@@ -99,6 +100,8 @@ fn main() {
         ("22", 'b') => println!("b soln: {}", aoc_22::solve_b(input).unwrap()),
         ("23", 'a') => println!("a soln: {}", aoc_23::solve_a(input).unwrap()),
         ("23", 'b') => println!("b soln: {}", aoc_23::solve_b(input).unwrap()),
+        ("24", 'a') => println!("a soln: {}", aoc_24::solve_a(input).unwrap()),
+        ("24", 'b') => println!("b soln: {}", aoc_24::solve_b(input).unwrap()),
         _ => panic!("Unrecognised problem and solution"),
     }
 }
