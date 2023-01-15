@@ -14,19 +14,11 @@ impl Add<&Direction> for Position {
     }
 }
 
-impl Add<Direction> for Position {
+impl Sub<&Direction> for Position {
     type Output = Self;
 
-    fn add(self, rhs: Direction) -> Self::Output {
-        self + &rhs
-    }
-}
-
-impl Sub<Direction> for Position {
-    type Output = Self;
-
-    fn sub(self, rhs: Direction) -> Self::Output {
-        self + Direction(-rhs.0, -rhs.1)
+    fn sub(self, rhs: &Direction) -> Self::Output {
+        self + &Direction(-rhs.0, -rhs.1)
     }
 }
 

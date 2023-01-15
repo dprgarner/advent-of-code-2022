@@ -79,8 +79,6 @@ impl BlizzardHistory {
 #[cfg(test)]
 mod tests {
 
-    use std::vec;
-
     use super::*;
 
     #[rustfmt::skip]
@@ -218,6 +216,7 @@ mod tests {
         assert_eq!(blizzard_history.has_blizzard_at(0, &Position(2, 4)), true);
         assert_eq!(blizzard_history.has_blizzard_at(0, &Position(2, 5)), false);
 
+        blizzard_history.next();
         // After 2 turns:
         // #.#####
         // #...v.#
